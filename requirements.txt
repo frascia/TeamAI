@@ -1,0 +1,8 @@
+streamlit
+crewai
+crewai-tools
+fpdf
+PyGithub
+edge-tts
+pandas
+pydantic
