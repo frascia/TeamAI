@@ -27,12 +27,13 @@ def verifica_password():
         del st.session_state["password_inserita"]
     else:
         st.session_state.autenticato = False
-        st.error("❌ Password errata. Riprova.")
+        st.error("❌ Password errata. Niente Tavola Rotonda per te oggi!")
 
+# Schermata di blocco iniziale (Il nostro Buttafuori di fiducia)
 if not st.session_state.autenticato:
     st.title("🔒 Accesso Riservato - AI Agency V2")
     st.text_input(
-        "Inserisci la password di sblocco:", 
+        "Inserisci la password di sblocco per svegliare gli agenti:", 
         type="password", 
         key="password_inserita",
         on_change=verifica_password
@@ -62,6 +63,7 @@ def esporta_in_pdf(testo_output, testo_discussione, nome_config):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     
+    # Sezione 1: Output finale strutturato
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, f"Output Finale Strutturato - Sessione: {nome_config}", ln=True, align="C")
@@ -71,6 +73,7 @@ def esporta_in_pdf(testo_output, testo_discussione, nome_config):
     testo_pulito_out = testo_output.replace("•", "-").replace("’", "'").replace("“", '"').replace("”", '"').encode("latin-1", "ignore").decode("latin-1")
     pdf.multi_cell(0, 6, testo_pulito_out)
     
+    # Sezione 2: Diario della Tavola Rotonda
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 10, "💬 Verbale della Sessione e Trascrizioni", ln=True)
@@ -236,6 +239,7 @@ def esegui_agenti_background(gemini_key, serper_key, gh_token, gh_repo, nome_con
                         f"I tuoi livelli di fiducia attuali verso i colleghi sono: {fiducia_str}. " \
                         f"Modula le tue approvazioni/rifiuti in base a questa fiducia."
 
+            # Assegnazione condizionale dell'equipaggiamento speciale "Ricerca"
             tools_agente = []
             if d.get('has_search', False) and serper_key:
                 try:
@@ -259,9 +263,9 @@ def esegui_agenti_background(gemini_key, serper_key, gh_token, gh_repo, nome_con
         task_description = f"{contesto_psicologico}" \
                            f"Obiettivo Universale da risolvere alla tavola rotonda: {istruzioni_task}. " \
                            f"Istruzioni di Protocollo Rigide per il Manager e gli Esperti:\n" \
-                           f"1. Raccogliete i pareri di tutti. Gli agenti con il tool di ricerca lo usino se incontrano dati sconosciuti.\n" \
+                           f"1. Raccogliete i pareri di tutti. Gli agenti dotati di ricerca internet la usino per colmare lacune (es. PLC ignoti o orari traghetti).\n" \
                            f"2. Se sorge un conflitto, l'agente con la fiducia o il peso più alto vince la trattativa.\n" \
-                           f"3. Il Manager ha l'obbligo di mappare accuratamente i contenuti nel modello Pydantic richiesto.\n" \
+                           f"3. Il Manager ha l'obbligo di mappare accuratamente i contenuti nel modello Pydantic richiesto, compilando ESITO, MOTIVAZIONE e CONTROPROPOSTA.\n" \
                            f"4. Mantieni l'intero itinerario/piano esteso all'interno del campo 'piano_finale_concordato' senza tagliare i dettagli costruttivi."
 
         task = Task(
@@ -297,7 +301,7 @@ def esegui_agenti_background(gemini_key, serper_key, gh_token, gh_repo, nome_con
         
         stringa_discussione = f"Trascrizione Ufficiale dei Box Decisionali - Sessione: {nome_config}\n"
         stringa_discussione += "==================================================================\n\n"
-        stringa_discussione += resultado_finale
+        stringa_discussione += risultato_finale
         
         nome_base = nome_config.lower().replace(' ', '_')
 
@@ -327,30 +331,33 @@ github_token = get_secret("GITHUB_TOKEN")
 github_repo = get_secret("GITHUB_REPO")
 
 if not gemini_key or not github_token or not github_repo:
-    st.error("❌ Errore: Mancano configurazioni critiche nei Secrets di Streamlit!")
+    st.error("❌ Errore: Mancano configurazioni critiche (GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO) nei Secrets!")
     st.stop()
 
+# Caricamento asincrono iniziale delle configurazioni da GitHub
 if "configs_salvate" not in st.session_state:
-    with st.spinner("🔄 Allineamento configurazioni con GitHub..."):
+    with st.spinner("🔄 Allineamento configurazioni Tavoli con GitHub..."):
         st.session_state.configs_salvate = carica_configurazioni_da_github(github_token, github_repo)
 
 if "roster_personaggi" not in st.session_state:
-    st.session_state.roster_personaggi = carica_personaggi_da_github(github_token, github_repo)
+    with st.spinner("🔄 Reclutamento Eroi dal Roster su GitHub..."):
+        st.session_state.roster_personaggi = carica_personaggi_da_github(github_token, github_repo)
 
 st.title("🤖 Agenzia Multi-Agente Universale V2: Tavola Rotonda Psicologica")
-st.write("Simulatore di consigli decisionali decentralizzati con **Matrice di Fiducia** e **Roster Personaggi** indipendenti.")
+st.write("Crea i tuoi personaggi, assegna abilità speciali, imposta le relazioni di fiducia e lancia i tuoi consiglieri nell'etere.")
 st.markdown("---")
 
-st.sidebar.header("🔄 Carica Modello Team")
+# --- SIDEBAR: CARICAMENTO TAVOLI ---
+st.sidebar.header("🔄 Carica Modello Tavolo")
 opzioni_caricamento = ["Nuova Configurazione..."] + list(st.session_state.configs_salvate.keys())
-config_scelta = st.sidebar.selectbox("Scegli un team preconfigurato:", opzioni_caricamento, index=0)
+config_scelta = st.sidebar.selectbox("Scegli un tavolo preconfigurato:", opzioni_caricamento, index=0)
 
-nome_configurazione = st.sidebar.text_input("ID/Nome della sessione attuale:", value="" if config_scelta == "Nuova Configurazione..." else config_scelta)
+nome_configurazione = st.sidebar.text_input("ID/Nome del Tavolo attuale:", value="" if config_scelta == "Nuova Configurazione..." else config_scelta)
 st.sidebar.markdown("---")
 
-# --- GRIGLIA EDITING AGENTI & ROSTER ---
+# --- GRIGLIA EDITING AGENTI & ROSTER INDIPENDENTE ---
 agenti_input = []
-st.subheader("👤 Configurazione dei 4 Membri del Consiglio")
+st.subheader("👤 Selezione e Configurazione dei 4 Seduti al Tavolo")
 
 default_roles = ["Analista Strategico", "Esperto Tecnico", "Responsabile Operativo", "Facilitatore/Manager"]
 col_a, col_b = st.columns(2)
@@ -360,8 +367,10 @@ for i in range(4):
     with target_col:
         with st.expander(f"👤 Posizione Tavolo {i+1}", expanded=True):
             
+            # 1. Selectbox legata al Roster autonomo dei personaggi
             opzioni_roster = ["Nuovo Personaggio (Crea da zero)..."] + list(st.session_state.roster_personaggi.keys())
             index_default_sel = 0
+            
             if config_scelta != "Nuova Configurazione..." and config_scelta in st.session_state.configs_salvate:
                 try:
                     saved_agent_name = st.session_state.configs_salvate[config_scelta]["agenti"][i].get("name", "")
@@ -372,12 +381,14 @@ for i in range(4):
             
             personaggio_scelto = st.selectbox(f"Seleziona Eroe per lo Slot {i+1}:", opzioni_roster, index=index_default_sel, key=f"sel_char_{i}")
             
+            # Valori di fallback
             def_name = f"Agente {i+1}"
             def_role = default_roles[i]
             def_goal, def_back = "", ""
             def_weight = 0.5
             def_has_search = False
             
+            # Se l'utente sceglie un personaggio salvato nel roster, estraiamo i dati
             if personaggio_scelto != "Nuovo Personaggio (Crea da zero)...":
                 char_data = st.session_state.roster_personaggi[personaggio_scelto]
                 def_name = char_data.get("name", def_name)
@@ -387,30 +398,33 @@ for i in range(4):
                 def_weight = char_data.get("weight", 0.5)
                 def_has_search = char_data.get("has_search", False)
 
+            # Campi di input grafici
             name = st.text_input(f"Nome dell'agente", value=def_name, key=f"n_{i}")
             role = st.text_input(f"Incarico / Ruolo operativo", value=def_role, key=f"r_{i}")
-            goal = st.text_input(f"Target / Focus dell'agente", value=def_goal, key=f"g_{i}")
-            backstory = st.text_area(f"Tratti psicologici e background", value=def_back, key=f"b_{i}", height=75)
+            goal = st.text_input(f"Target / Focus dell'agente (Goal)", value=def_goal, key=f"g_{i}")
+            backstory = st.text_area(f"Tratti psicologici e background (Backstory)", value=def_back, key=f"b_{i}", height=75)
             
             col_w, col_s = st.columns([2, 1])
             with col_w:
                 weight = st.slider(f"Fermezza Voto (Weight)", 0.0, 1.0, value=def_weight, step=0.1, key=f"w_{i}")
             with col_s:
-                st.write("")
-                has_search = st.checkbox("📶 Ricerca Web", value=def_has_search, key=f"s_{i}", help="Se attivo, l'agente userà internet.")
+                st.write("") # Allineatore visivo
+                has_search = st.checkbox("📶 Ricerca Web", value=def_has_search, key=f"s_{i}", help="Se attivo, questo personaggio potrà navigare su internet per risolvere i problemi.")
 
-            if st.button(f"💾 Inserisci {name} nel Roster globale", key=f"btn_save_char_{i}"):
+            # Pulsante per salvare INDIPENDENTEMENTE il personaggio nel Roster indipendente
+            if st.button(f"💾 Salva/Aggiorna {name} nel Roster", key=f"btn_save_char_{i}"):
                 if name.strip() == "" or name.startswith("Agente"):
-                    st.error("❌ Assegna un nome proprio valido prima di inserire il personaggio nel Roster!")
+                    st.error("❌ Dai un nome proprio valido prima di salvarlo nel Roster globale dei personaggi!")
                 else:
                     char_payload = {"name": name, "role": role, "goal": goal, "backstory": backstory, "weight": weight, "has_search": has_search}
                     char_json = json.dumps(char_payload, indent=4)
                     path_char_json = f"characters/{name.lower().replace(' ', '_')}.json"
                     
-                    if salva_file_su_github(github_token, github_repo, char_json, path_char_json, f"Add Character: {name}"):
-                        st.success(f"✨ Personaggio {name} salvato!")
-                        st.session_state.roster_personaggi = carica_personaggi_da_github(github_token, github_repo)
-                        st.rerun()
+                    with st.spinner(f"Salvataggio di {name} su GitHub..."):
+                        if salva_file_su_github(github_token, github_repo, char_json, path_char_json, f"Add Character: {name}"):
+                            st.success(f"✨ Personaggio {name} archiviato nella cartella globale /characters!")
+                            st.session_state.roster_personaggi = carica_personaggi_da_github(github_token, github_repo)
+                            st.rerun()
 
         st.markdown("---")
         agenti_input.append({"name": name, "role": role, "goal": goal, "backstory": backstory, "weight": weight, "has_search": has_search})
@@ -469,11 +483,11 @@ with col_p:
             
             profili_psicologici_input.append(mio_profilo)
 
-# --- PULSANTE SALVA TAVOLO ---
+# --- PULSANTE ARCOLAIO: SALVA INTERO CONFIG TAVOLO ---
 st.markdown("---")
-if st.button("💾 Archivia Modello Struttura Tavolo su GitHub"):
+if st.button("💾 Archivia Modello Struttura Tavolo Completo su GitHub"):
     if not nome_configurazione:
-        st.error("❌ Manca il nome identificativo della configurazione!")
+        st.error("❌ Manca il nome identificativo del Tavolo prima di salvare!")
     else:
         payload = {
             "nome": nome_configurazione, 
@@ -484,18 +498,18 @@ if st.button("💾 Archivia Modello Struttura Tavolo su GitHub"):
         json_content = json.dumps(payload, indent=4)
         path_json = f"config/{nome_configurazione.lower().replace(' ', '_')}.json"
         
-        with st.spinner("💾 Committing in corso..."):
+        with st.spinner("💾 Sincronizzazione struttura tavolo su GitHub..."):
             if salva_file_su_github(github_token, github_repo, json_content, path_json, f"Update config: {nome_configurazione}"):
-                st.success("Configurazione del Tavolo allineata con successo!")
+                st.success(f"Tavolo '{nome_configurazione}' archiviato con successo!")
                 st.session_state.configs_salvate = carica_configurazioni_da_github(github_token, github_repo)
 
-# --- RUN CRON PROMPT ---
+# --- CONVOCAZIONE E AVVIO ---
 st.markdown("---")
-st.subheader("🚀 Lancio della Sessione Operativa")
-task_prompt = st.text_area("Inserisci la direttiva o l'itinerario da ottimizzare:", 
-                           "Pianificate nei dettagli l'itinerario di 21 giorni per Corea del Sud e Giappone Meridionale (Shikoku/Kyushu) ottimizzando i costi ed evitando buchi logistici.")
+st.subheader("🚀 Obiettivo Universale da elaborare")
+task_prompt = st.text_area("Cosa devono risolvere, calcolare o negoziare gli agenti?", 
+                           "Pianificate l'itinerario ottimizzato di 21 giorni per Corea del Sud e Giappone (Shikoku/Kyushu) integrando il traghetto Busan-Fukuoka. L'agente logistico verifichi i collegamenti online se necessario.")
 
-max_giri = st.slider("Cicli di revisione concessi (Loop Breaker):", min_value=3, max_value=20, value=12)
+max_giri = st.slider("Cicli di feedback concessi (Loop Breaker):", min_value=3, max_value=20, value=12)
 
 if st.button("🔥 Avvia Consiglio di Fazione in Background", type="primary"):
     if not nome_configurazione or len(nomi_validi) < 4:
@@ -507,4 +521,4 @@ if st.button("🔥 Avvia Consiglio di Fazione in Background", type="primary"):
         )
         thread = threading.Thread(target=esegui_agenti_background, args=args_background)
         thread.start()
-        st.success("⚡ Riunione delegata in background! Controlla la repo GitHub tra pochi minuti per ritirare PDF e MP3.")
+        st.success("⚡ Consiglio avviato in background! Puoi chiudere la scheda del browser o andarti a prendere un caffè. I file PDF e MP3 verranno iniettati direttamente su GitHub.")
